@@ -3,7 +3,7 @@ import supertest from "supertest";
 import app from "./../src/app";
 import prisma from "../src/database";
 import { UserInput } from "../src/repository";
-import { createUser } from "./factories/user-factory";
+import { buildUser, createRandomUser } from "./factories/user-factory";
 
 const api = supertest(app);
 
@@ -23,10 +23,11 @@ describe("POST /users tests", () => {
   });
 
   it("should receive 409 when trying to create two users with same e-mail", async () => {
-
-    const userData = await createUser("teste@teste.com.br", "teste");
-
-    const { status } = await api.post("/users").send(userData);
+    const user = await createRandomUser();
+    const { status } = await api.post("/users").send({
+      email: user.email,
+      password: "teste"
+    });
     expect(status).toBe(409);
   });
 
@@ -34,15 +35,12 @@ describe("POST /users tests", () => {
 
 describe("GET /users tests", () => {
   it("should return a single user", async () => {
-
-    const createdUser = await createUser("teste@teste.com.br", "teste");
-
-    const { status, body } = await api.get(`/users/${createdUser.id}`);
+    const user = await createRandomUser();
+    const { status, body } = await api.get(`/users/${user.id}`);
     expect(status).toBe(200);
     expect(body).toEqual({
-      id: createdUser.id,
-      email: "teste@teste.com.br",
-      password: "teste"
+      ...user,
+      id: user.id
     });
   });
 
@@ -52,9 +50,8 @@ describe("GET /users tests", () => {
   });
 
   it("should return all users", async () => {
-
-    await createUser("teste@teste.com.br", "teste");
-    await createUser("teste2@teste.com.br", "teste");
+    await createRandomUser();
+    await createRandomUser();
 
     const { status, body } = await api.get("/users");
     expect(status).toBe(200);
